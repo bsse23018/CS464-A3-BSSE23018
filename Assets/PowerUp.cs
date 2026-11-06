@@ -1,5 +1,6 @@
 using UnityEngine;
 
+// Speed power-up collectible: triggers temporary movement speed boost managed on the player.
 // C3: pickup only. It calls the player's BoostSpeed; the TIMER runs on the player.
 public class PowerUp : MonoBehaviour
 {
