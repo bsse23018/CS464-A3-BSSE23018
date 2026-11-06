@@ -2,7 +2,7 @@
 
 - **Video (60–120 s):** [YouTube (unlisted) or Google Drive link]
 - **Started from:** [your Assignment 02 repo's link, or "a new project", and why]
-- **Controls:** WASD / arrow keys move, SPACE jump, R restart the level
+- **Controls:** WASD / arrow keys move, SPACE jump, R restart the level, N skip to next level (testing)
 - **To win a level:** collect the required coins (shown as Score x / y on screen), then step on the goal. It turns from red to green when it is open.
 
 ## Levels
