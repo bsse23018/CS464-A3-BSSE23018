@@ -1,222 +1,179 @@
+using System.Collections;
+using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-// Starts itself on Play. The LEVEL now comes from the saved scene (LevelSettings),
-// it is no longer built in code at run time.
+// One GameManager per level. Owns score, lives, win/lose, respawn and the HUD texts.
 public class GameManager : MonoBehaviour
 {
-    public static GameManager I;
-    public enum State { Intro, Playing, Dead, LevelDone, GameOver, Won }
+    public static GameManager Instance { get; private set; }
 
-    public State state = State.Intro;
-    public int level, lives, coins;
-    public float timeLeft;
-    public int stateFrame;
-    public float graceUntil;          // no fall-death right after a spawn
+    [Header("Numbers")]
+    public int targetScore = 8;
+    public int startLives = 3;
+    public float respawnDelay = 0.8f;
+    public float respawnProtection = 2f;
+    public string levelName = "Level";
+    public string objective = "";
 
-    // survive a scene load
-    static int pendingLives = -1;     // -1 = give a fresh StartLives
-    static bool pendingStart;
+    [Header("Scene references (set per level)")]
+    public Transform player;
+    public Transform respawnPoint;
 
-    LevelInfo info;
-    PlayerController player;
-    string msg = "", toast = "";
-    float toastTimer;
-    GUIStyle hud, center;
-    const int StartLives = 3;
+    [Header("UI (inside this prefab)")]
+    public TMP_Text scoreText;
+    public TMP_Text heartsText;
+    public TMP_Text livesText;
+    public TMP_Text powerText;
+    public TMP_Text messageText;
+    public TMP_Text titleText;
+    public TMP_Text objectiveText;
+    public GameObject winPanel;
+    public GameObject losePanel;
+    public TMP_Text winInfoText;
+    public TMP_Text loseInfoText;
+    public TMP_Text nextButtonLabel;
 
-    public bool Playing => state == State.Playing;
-    public bool Unlocked => coins >= info.coins;
+    public int Score { get; private set; }
+    public int Lives { get; private set; }
+    public bool GoalOpen => Score >= targetScore;
+    public bool PlayerCanMove => state == State.Playing;
 
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-    static void Boot()
-    {
-        if (I != null) return;
-        new GameObject("GameManager").AddComponent<GameManager>();
-    }
+    enum State { Playing, Respawning, Won, Lost }
+    State state = State.Playing;
+
+    Health health;
+    PlayerController controller;
+    float messageUntil;
+    string lastPower = "";
+    const float SpawnHeight = 1.1f;   // spawn points sit on the floor
 
     void Awake()
     {
-        I = this;
-        Physics.autoSyncTransforms = true;
-
-        var ls = FindAnyObjectByType<LevelSettings>();
-        if (ls == null)
+        Instance = this;
+        Time.timeScale = 1f;          // survives a scene load, so reset it here too
+        Lives = startLives;
+        if (player != null)
         {
-            Debug.LogError("No LevelSettings in this scene. Open a Lab06 level scene (Tools > Lab06 > Bake 5 levels into scenes).");
-            enabled = false;
-            return;
+            health = player.GetComponent<Health>();
+            controller = player.GetComponent<PlayerController>();
         }
-        info = ls.ToInfo();
-        level = SceneManager.GetActiveScene().buildIndex;
-
-        SetupCamera();
-        CreatePlayer(info.start);
-
-        lives = pendingLives < 0 ? StartLives : pendingLives;
-        pendingLives = -1;
-        coins = 0;
-        timeLeft = info.time;
-        graceUntil = Time.time + 0.75f;
-        SetState(pendingStart ? State.Playing : State.Intro);
-        pendingStart = false;
+        if (winPanel != null) winPanel.SetActive(false);
+        if (losePanel != null) losePanel.SetActive(false);
     }
 
-    void SetupCamera()
+    void Start()
     {
-        var cam = Camera.main;
-        if (cam == null)
-        {
-            var go = new GameObject("Main Camera");
-            go.tag = "MainCamera";
-            cam = go.AddComponent<Camera>();
-            go.AddComponent<AudioListener>();
-        }
-        cam.orthographic = false;
-        cam.fieldOfView = 60f;
-        if (cam.GetComponent<CameraFollow>() == null) cam.gameObject.AddComponent<CameraFollow>();
-        RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
-        RenderSettings.ambientLight = new Color(0.55f, 0.55f, 0.6f);
-    }
-
-    void CreatePlayer(Vector3 at)
-    {
-        var pg = new GameObject("Player");
-        pg.transform.position = at;
-        var cc = pg.AddComponent<CharacterController>();
-        cc.height = 2f; cc.radius = 0.5f; cc.center = Vector3.zero;
-
-        var body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-        body.name = "Body";
-        body.transform.SetParent(pg.transform, false);
-        Destroy(body.GetComponent<Collider>());
-        body.GetComponent<Renderer>().material.color = new Color(0.2f, 0.5f, 1f);
-
-        var nose = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        nose.name = "Nose";
-        nose.transform.SetParent(pg.transform, false);
-        nose.transform.localPosition = new Vector3(0f, 0.5f, 0.45f);
-        nose.transform.localScale = new Vector3(0.3f, 0.3f, 0.5f);
-        Destroy(nose.GetComponent<Collider>());
-        nose.GetComponent<Renderer>().material.color = Color.white;
-
-        player = pg.AddComponent<PlayerController>();
-    }
-
-    // Loading another level = loading another saved scene (its build index = level number).
-    void Go(int levelIndex, bool resetLives, bool start)
-    {
-        pendingLives = resetLives ? -1 : lives;
-        pendingStart = start;
-        SceneManager.LoadScene(levelIndex);
-    }
-
-    void SetState(State s) { state = s; stateFrame = Time.frameCount; }
-
-    public void AddCoin() { coins++; }
-
-    public void Die(string reason)
-    {
-        if (!Playing) return;
-
-        // ignore bogus "fell" deaths while the player is actually above the void
-        if (reason.StartsWith("You fell") && player.transform.position.y > -5f) return;
-
-        Debug.Log("DIE: " + reason + " at " + player.transform.position);
-        lives--;
-        msg = reason;
-        SetState(lives <= 0 ? State.GameOver : State.Dead);
-    }
-
-    public void TryFinish()
-    {
-        if (!Playing) return;
-        if (!Unlocked)
-        {
-            toast = "Collect all coins first (" + coins + "/" + info.coins + ")";
-            toastTimer = 1.5f;
-            return;
-        }
-        SetState(State.LevelDone);
+        if (titleText != null) titleText.text = levelName;
+        if (objectiveText != null) objectiveText.text = objective;
+        RefreshHud();
     }
 
     void Update()
     {
-        if (toastTimer > 0f) toastTimer -= Time.deltaTime;
-        if (GameInput.Skip()) { Go((level + 1) % LevelBuilder.Count, true, false); return; }
-
-        switch (state)
+        if (messageUntil > 0f && Time.unscaledTime > messageUntil)
         {
-            case State.Intro:
-                if (GameInput.Confirm()) SetState(State.Playing);
-                break;
-            case State.Playing:
-                if (GameInput.Restart()) { Go(level, false, true); break; }
-                if (info.time > 0f)
-                {
-                    timeLeft -= Time.deltaTime;
-                    if (timeLeft <= 0f) { timeLeft = 0f; Die("Time's up!"); }
-                }
-                break;
-            case State.Dead:
-                if (GameInput.Confirm()) Go(level, false, true);
-                break;
-            case State.LevelDone:
-                if (GameInput.Confirm())
-                {
-                    if (level + 1 < LevelBuilder.Count) Go(level + 1, true, false);
-                    else SetState(State.Won);
-                }
-                break;
-            case State.GameOver:
-            case State.Won:
-                if (GameInput.Confirm()) Go(0, true, false);
-                break;
+            if (messageText != null) messageText.text = "";
+            messageUntil = 0f;
         }
+
+        // power-up timer on the HUD
+        string p = "";
+        if (controller != null && controller.BoostRemaining > 0f)
+            p = "SPEED BOOST  " + controller.BoostRemaining.ToString("0.0") + "s";
+        if (p != lastPower && powerText != null) { powerText.text = p; lastPower = p; }
+
+        if (GameInput.Restart()) Restart();
+        if (GameInput.Skip()) NextLevel();     // testing shortcut
     }
 
-    string OverlayText()
+    // ---- score ---------------------------------------------------------------
+    public void AddScore(int amount)
     {
-        switch (state)
-        {
-            case State.Intro: return "LEVEL " + (level + 1) + ": " + info.name + "\n" + info.objective + "\n\nPress SPACE to start";
-            case State.Dead: return msg + "\nLives left: " + lives + "\n\nPress SPACE to retry";
-            case State.LevelDone: return level + 1 < LevelBuilder.Count ? "LEVEL COMPLETE!\n\nPress SPACE for the next level" : "FINAL LEVEL COMPLETE!\n\nPress SPACE";
-            case State.GameOver: return "GAME OVER\n" + msg + "\n\nPress SPACE to restart from Level 1";
-            case State.Won: return "YOU WIN!\nAll 5 levels cleared!\n\nPress SPACE to play again";
-        }
-        return "";
+        Score += amount;
+        RefreshHud();
     }
 
-    void OnGUI()
+    // Texts are set only when something changes, never every frame.
+    public void RefreshHud()
     {
-        float s = Screen.height / 720f;
-        GUI.matrix = Matrix4x4.Scale(new Vector3(s, s, 1f));
-        float W = Screen.width / s, H = Screen.height / s;
+        if (scoreText != null) scoreText.text = "Score: " + Score + " / " + targetScore;
+        if (heartsText != null && health != null)
+            heartsText.text = "Hearts: " + Mathf.Max(health.current, 0) + " / " + health.max;
+        if (livesText != null) livesText.text = "Lives: " + Lives;
+    }
 
-        if (hud == null)
+    public void ShowMessage(string text, float seconds)
+    {
+        if (messageText == null) return;
+        if (messageText.text != text) messageText.text = text;
+        messageUntil = Time.unscaledTime + seconds;
+    }
+
+    // ---- lives, respawn, losing ----------------------------------------------
+    public void SetCheckpoint(Transform point) => respawnPoint = point;
+
+    public void LoseLife(string reason)
+    {
+        if (state != State.Playing) return;
+        Lives--;
+        RefreshHud();
+        if (Lives <= 0) Lose(reason);
+        else StartCoroutine(Respawn(reason));
+    }
+
+    IEnumerator Respawn(string reason)
+    {
+        state = State.Respawning;
+        ShowMessage(reason + "  Respawning...", respawnDelay + 0.6f);
+        yield return new WaitForSeconds(respawnDelay);          // a beat
+
+        controller.Teleport(respawnPoint.position + Vector3.up * SpawnHeight);
+        health.ResetFull(respawnProtection);                    // moment of protection
+        state = State.Playing;
+    }
+
+    void Lose(string reason)
+    {
+        state = State.Lost;
+        Time.timeScale = 0f;
+        if (loseInfoText != null) loseInfoText.text = reason + "\nScore: " + Score + " / " + targetScore;
+        if (losePanel != null) losePanel.SetActive(true);
+    }
+
+    // ---- winning ---------------------------------------------------------------
+    public void TryFinish()
+    {
+        if (state != State.Playing) return;
+        if (!GoalOpen)
         {
-            hud = new GUIStyle(GUI.skin.label) { fontSize = 22, fontStyle = FontStyle.Bold };
-            hud.normal.textColor = Color.white;
-            center = new GUIStyle(hud) { fontSize = 32, alignment = TextAnchor.MiddleCenter, wordWrap = true };
+            ShowMessage("Collect " + (targetScore - Score) + " more coin(s) first!", 1.5f);
+            return;
         }
+        Win();
+    }
 
-        GUI.Label(new Rect(20, 10, 1000, 30), "Level " + (level + 1) + "/" + LevelBuilder.Count + ": " + info.name, hud);
-        GUI.Label(new Rect(20, 40, 1000, 30), info.objective, hud);
-        string stats = "Lives: " + lives;
-        if (info.coins > 0) stats += "    Coins: " + coins + "/" + info.coins;
-        if (info.time > 0f) stats += "    Time: " + Mathf.CeilToInt(timeLeft) + "s";
-        GUI.Label(new Rect(20, 70, 1000, 30), stats, hud);
-        GUI.Label(new Rect(20, H - 40, 1100, 30), "WASD/Arrows: move    SPACE: jump    R: restart level    N: skip level (testing)", hud);
+    void Win()
+    {
+        state = State.Won;
+        Time.timeScale = 0f;
+        bool last = SceneManager.GetActiveScene().buildIndex + 1 >= SceneManager.sceneCountInBuildSettings;
+        if (nextButtonLabel != null) nextButtonLabel.text = last ? "Play again" : "Next level";
+        if (winInfoText != null) winInfoText.text = "Score: " + Score + "    Lives left: " + Lives;
+        if (winPanel != null) winPanel.SetActive(true);
+    }
 
-        if (toastTimer > 0f) GUI.Label(new Rect(0, H - 110, W, 40), toast, center);
+    // ---- buttons ---------------------------------------------------------------
+    public void Restart()
+    {
+        Time.timeScale = 1f;                    // first, or the new level never moves
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+    }
 
-        if (state != State.Playing)
-        {
-            var box = new Rect(W / 2 - 380, H / 2 - 150, 760, 300);
-            GUI.Box(box, GUIContent.none);
-            GUI.Box(box, GUIContent.none);
-            GUI.Label(new Rect(W / 2 - 360, H / 2 - 140, 720, 280), OverlayText(), center);
-        }
+    public void NextLevel()
+    {
+        Time.timeScale = 1f;
+        int next = (SceneManager.GetActiveScene().buildIndex + 1) % SceneManager.sceneCountInBuildSettings;
+        SceneManager.LoadScene(next);
     }
 }

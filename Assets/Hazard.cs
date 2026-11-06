@@ -1,13 +1,27 @@
 using UnityEngine;
 
+// B3 + B4: ONE script for every danger (spikes, guard, crusher slab). Trigger collider.
+// It asks Health every physics step; Health says no during i-frames.
 public class Hazard : MonoBehaviour
 {
-    void OnTriggerEnter(Collider o) { Hit(o); }
-    void OnTriggerStay(Collider o) { Hit(o); }
+    public int damage = 1;
+    public float knockback = 9f;
+    public float knockTime = 0.25f;     // steering is off this long, so the push is visible
 
-    void Hit(Collider o)
+    void OnTriggerStay(Collider other)
     {
-        if (o.GetComponentInParent<PlayerController>() != null && GameManager.I != null)
-            GameManager.I.Die("You touched a hazard!");
+        if (!other.CompareTag("Player")) return;
+        if (!other.TryGetComponent(out Health health)) return;
+        if (!health.TakeDamage(damage)) return;          // no hit, no knockback
+
+        Rigidbody body = other.attachedRigidbody;
+        if (body == null) return;
+        Vector3 away = body.position - transform.position;
+        away.y = 0f;                                      // flat, away from the hazard
+        if (away.sqrMagnitude < 0.01f) away = Vector3.back;
+        Vector3 push = away.normalized * knockback;
+
+        if (other.TryGetComponent(out PlayerController p))
+            p.Knockback(push, knockTime);
     }
 }
