@@ -30,13 +30,17 @@
 ## Short answers
 
 **1. Why does a trigger need a Rigidbody on at least one of the two objects?**
+
 [write this in your own words, about your own code]
 
 **2. Which ForceMode do your knockback and your Part A force use, and why each?**
+
 [write this in your own words, about your own code]
 
 **3. What does your code do when a second power-up is picked up while one is running?**
+
 [write this in your own words, about your own code]
 
 **4. Why can `==` fail as an arrival check, and when does it work?**
+
 [write this in your own words, about your own code]
