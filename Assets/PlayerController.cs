@@ -71,6 +71,8 @@ public class PlayerController : MonoBehaviour
         if (move.sqrMagnitude > 0.01f && Time.time >= noControlUntil)
             rb.MoveRotation(Quaternion.Slerp(rb.rotation, Quaternion.LookRotation(move), 0.25f));
 
+        // Jump and ground check: only execute a queued jump if verified grounded.
+        // A sphere cast below the player prevents infinite air jumping while reliably tolerating uneven terrain.
         if (jumpQueued && Grounded())
         {
             Vector3 cur = rb.linearVelocity;
@@ -79,12 +81,16 @@ public class PlayerController : MonoBehaviour
         jumpQueued = false;
     }
 
+    // Ground check: casts a sphere downwards to detect colliders on non-trigger layers.
+    // Ignores triggers (like coins or hazards) so jumping is only permitted on physical surfaces.
     bool Grounded()
     {
         return Physics.SphereCast(rb.position, 0.4f, Vector3.down, out _, 0.75f, ~0, QueryTriggerInteraction.Ignore);
     }
 
-    // B4: a push steering can't wipe. Hazard hands the push over; steering waits for 'seconds'.
+    // B4: Knockback logic:
+    // Applies an immediate physics impulse while disabling player steering input until 'noControlUntil'.
+    // Steering waits so player input in FixedUpdate does not immediately wipe out the velocity change.
     public void Knockback(Vector3 push, float seconds)
     {
         Vector3 v = rb.linearVelocity;
@@ -93,8 +99,10 @@ public class PlayerController : MonoBehaviour
         noControlUntil = Time.time + seconds;
     }
 
-    // C3: the TIMER LIVES HERE (not on the pickup, which is destroyed).
-    // Rule for a second pickup: REFRESH - stop the running coroutine, start a new full one.
+    // C3: Speed boost duration and timer management:
+    // The timer lives on the PlayerController because the pickup GameObject is destroyed upon collection.
+    // Refresh rule: picking up a second boost while one is active resets/refreshes the full duration
+    // rather than stacking speeds or discarding the pickup.
     public void BoostSpeed(float multiplier, float seconds)
     {
         if (boostRoutine != null) StopCoroutine(boostRoutine);
