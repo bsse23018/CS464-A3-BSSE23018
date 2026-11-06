@@ -1,6 +1,11 @@
 using UnityEngine;
 
-// B1 + B2: Patrol -> Chase -> Return. Kinematic Rigidbody, arrival by DISTANCE (not ==).
+// B1 + B2: Kinematic Rigidbody patrol enemy with state machine (Patrol -> Chase -> Return).
+// State transitions:
+//   - Patrol: Moves sequentially along waypoints at patrolSpeed. Transitions to Chase if player enters chaseRange.
+//   - Chase: Pursues the player at chaseSpeed. Transitions to Return if player moves beyond giveUpRange (hysteresis).
+//   - Return: Navigates back to current patrol waypoint at patrolSpeed; transitions to Patrol on arrival or back to Chase if player re-enters chaseRange.
+// Uses distance threshold rather than exact equality (==) for arrival checks.
 [RequireComponent(typeof(Rigidbody))]
 public class EnemyPatrol : MonoBehaviour
 {
@@ -107,7 +112,9 @@ public class EnemyPatrol : MonoBehaviour
         rb.MovePosition(Vector3.MoveTowards(rb.position, target, speed * Time.fixedDeltaTime));
     }
 
-    // arrival by distance, not ==
+    // Arrival check uses a distance threshold (Vector3.Distance < arriveDistance), never ==.
+    // Floating-point step sizes (speed * Time.fixedDeltaTime) almost never land exactly on a waypoint position,
+    // so an exact equality check would overshoot, cause jitter, or fail to detect arrival entirely.
     bool Arrived(Vector3 target)
     {
         Vector3 a = rb.position, b = target;
