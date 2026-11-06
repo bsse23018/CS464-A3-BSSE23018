@@ -12,6 +12,10 @@ public class Hazard : MonoBehaviour
     {
         if (!other.CompareTag("Player")) return;
         if (!other.TryGetComponent(out Health health)) return;
+        // Knockback is only applied if TakeDamage returned true:
+        // During i-frames or when dead, TakeDamage returns false. If knockback were applied
+        // unconditionally during i-frames, the player would be continuously knocked around
+        // on every physics frame while trying to escape the hazard zone.
         if (!health.TakeDamage(damage)) return;          // no hit, no knockback
 
         Rigidbody body = other.attachedRigidbody;
