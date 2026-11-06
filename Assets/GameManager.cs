@@ -3,6 +3,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
+// Core game manager singleton: tracks score, player lives, level progression, and HUD updates.
 // One GameManager per level. Owns score, lives, win/lose, respawn and the HUD texts.
 public class GameManager : MonoBehaviour
 {
