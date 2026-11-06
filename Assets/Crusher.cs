@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 
+// Crusher hazard: cycles through three timed phases: Rest -> Warning marker -> Strike slab.
 // B3: a danger that warns first. Rest (nothing) -> Warn (yellow marker) -> Strike (slab + collider on).
 public class Crusher : MonoBehaviour
 {
