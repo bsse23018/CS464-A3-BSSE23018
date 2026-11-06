@@ -1,7 +1,7 @@
-# CS464 Assignment 03 · [Your name] · [Roll no]
+# CS464 Assignment 03 · Muhammad Tayyab · BSSE23018
 
-- **Video (60–120 s):** [YouTube (unlisted) or Google Drive link]
-- **Started from:** [your Assignment 02 repo's link, or "a new project", and why]
+- **Video (60–120 s):** <video src="Recording 2026-11-06 184620.mp4" width="320">
+
 - **Controls:** WASD / arrow keys move, SPACE jump, R restart the level, N skip to next level (testing)
 - **To win a level:** collect the required coins (shown as Score x / y on screen), then step on the goal. It turns from red to green when it is open.
 
@@ -9,11 +9,11 @@
 
 | Level | Screenshot | New idea | Combined with |
 |---|---|---|---|
-| Level01 | <img src="Docs/a3/level01.png" width="320"> | Coins, a score, a goal, and a bounce pad (VelocityChange) | Nothing hurts yet |
-| Level02 | <img src="Docs/a3/level02.png" width="320"> | Spikes that cost one heart at a time, with i-frames and knockback | Coins next to the spikes (risky detours) |
-| Level03 | <img src="Docs/a3/level03.png" width="320"> | A guard that patrols, chases, gives up and returns | Spikes beside its route, a checkpoint |
-| Level04 | <img src="Docs/a3/level04.png" width="320"> | The crusher: rest, yellow warning, then a 2-damage strike | A ping-pong guard between the crushers |
-| Level05 | <img src="Docs/a3/level05.png" width="320"> | Two speed power-ups (second pickup refreshes the timer) | Everything so far, plus a second guard |
+| Level01 | <img src="Docs/l1.png" width="320"> | Coins, a score, a goal, and a bounce pad (VelocityChange) | Nothing hurts yet |
+| Level02 | <img src="Docs/l2.png" width="320"> | Spikes that cost one heart at a time, with i-frames and knockback | Coins next to the spikes (risky detours) |
+| Level03 | <img src="Docs/l3.png" width="320"> | A guard that patrols, chases, gives up and returns | Spikes beside its route, a checkpoint |
+| Level04 | <img src="Docs/l4.png" width="320"> | The crusher: rest, yellow warning, then a 2-damage strike | A ping-pong guard between the crushers |
+| Level05 | <img src="Docs/l5.png" width="320"> | Two speed power-ups (second pickup refreshes the timer) | Everything so far, plus a second guard |
 
 ## The numbers
 
