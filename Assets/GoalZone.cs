@@ -1,5 +1,6 @@
 using UnityEngine;
 
+// Goal zone trigger: unlocks and triggers level completion once target score is reached.
 // Red while locked, green once the score reaches targetScore.
 public class GoalZone : MonoBehaviour
 {
