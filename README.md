@@ -1,6 +1,5 @@
 # CS464 Assignment 03 · Muhammad Tayyab · BSSE23018
 
-- **Video (60–120 s):** https://youtu.be/xxxx
 - **Started from:** My Assignment 02 repo: https://github.com/bsse23018/CS464-A2-BSSE23018 — I extended its five levels.
 - **Controls:** WASD / arrow keys move, SPACE jump, R restart the level, N skip to next level (testing)
 - **To win a level:** collect the required coins (shown as Score x / y on screen), then step on the goal. It turns from red to green when it is open.
