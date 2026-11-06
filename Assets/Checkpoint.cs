@@ -1,5 +1,6 @@
 using UnityEngine;
 
+// Checkpoint marker: records player respawn position upon trigger contact and turns green.
 public class Checkpoint : MonoBehaviour
 {
     public Renderer flag;
