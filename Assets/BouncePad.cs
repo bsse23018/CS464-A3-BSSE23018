@@ -1,5 +1,6 @@
 using UnityEngine;
 
+// Bounce pad mechanic: launches the player upwards using an instantaneous ForceMode.VelocityChange.
 // A4: the force. VelocityChange = one kick that ignores mass, called once from OnTriggerEnter.
 // It pushes UP only, because the controller rewrites the sideways speed every step.
 public class BouncePad : MonoBehaviour
